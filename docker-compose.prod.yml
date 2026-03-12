@@ -1,0 +1,161 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: paperscript-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - paperscript
+
+  # ---------------------------------------------------------------------------
+  # Certbot SSL
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot
+    container_name: paperscript-certbot
+    volumes:
+      - certbot_webroot:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - paperscript
+
+  # ---------------------------------------------------------------------------
+  # Backend - FastAPI Application (Production)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: paperscript-backend
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - paperscript
+
+  # ---------------------------------------------------------------------------
+  # Frontend - Next.js Application (Production)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: paperscript-frontend
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    networks:
+      - paperscript
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: paperscript-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paperscript
+
+  # ---------------------------------------------------------------------------
+  # Redis
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: paperscript-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paperscript
+
+  # ---------------------------------------------------------------------------
+  # MinIO
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: paperscript-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - paperscript
+
+  # ---------------------------------------------------------------------------
+  # LaTeX Compilation Service
+  # ---------------------------------------------------------------------------
+  latex:
+    build:
+      context: ./latex-service
+      dockerfile: Dockerfile
+    container_name: paperscript-latex
+    restart: unless-stopped
+    volumes:
+      - latex_workdir:/workdir
+    networks:
+      - paperscript
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  latex_workdir:
+  certbot_webroot:
+  certbot_certs:
+
+networks:
+  paperscript:
+    driver: bridge
