@@ -1,0 +1,33 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: paperscript-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_INSFORGE_BASE_URL=https://insforge.wyze.pro
+      - NEXT_PUBLIC_INSFORGE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzY2NDZ9.MfQHfauiFJev6x3s7WlsCnhmfEmGKbN9v8QhVVYuoX0
+      - NEXT_PUBLIC_APP_URL=https://paperscript.wyze.pro
+    expose:
+      - "3000"
+    networks:
+      - paperscript
+
+  nginx:
+    image: nginx:alpine
+    container_name: paperscript-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+    networks:
+      - paperscript
+
+networks:
+  paperscript:
+    driver: bridge
