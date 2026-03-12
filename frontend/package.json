@@ -11,15 +11,10 @@
   },
   "dependencies": {
     "@insforge/sdk": "latest",
+    "@insforge/nextjs": "latest",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@codemirror/lang-latex": "^0.1.0",
-    "codemirror": "^6.0.0",
-    "y-codemirror.next": "^0.3.0",
-    "yjs": "^13.6.0",
-    "y-websocket": "^2.0.0",
-    "pdfjs-dist": "^4.0.0",
     "lucide-react": "^0.400.0",
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.3.0"
