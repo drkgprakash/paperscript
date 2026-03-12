@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@insforge/nextjs";
 import { cn } from "@/lib/utils";
+import { useProfile } from "@/hooks/use-profile";
 import {
   FileText,
   FolderOpen,
@@ -14,6 +15,7 @@ import {
   Plus,
   Search,
   Bell,
+  ShieldCheck,
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -30,6 +32,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { isAdmin } = useProfile();
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -71,6 +74,24 @@ export default function DashboardLayout({
               </Link>
             );
           })}
+          {/* Admin link */}
+          {isAdmin && (
+            <>
+              <div className="my-3 border-t border-gray-100" />
+              <Link
+                href="/dashboard/admin"
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  pathname.startsWith("/dashboard/admin")
+                    ? "bg-amber-50 text-amber-700"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                )}
+              >
+                <ShieldCheck className={cn("h-4.5 w-4.5", pathname.startsWith("/dashboard/admin") ? "text-amber-600" : "text-gray-400")} />
+                Admin
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* User section */}
