@@ -1,4 +1,9 @@
 services:
+  cleanup:
+    image: alpine:latest
+    container_name: paperscript-nginx
+    command: ["echo", "done"]
+    restart: "no"
   frontend:
     build:
       context: ./frontend
@@ -6,6 +11,9 @@ services:
       target: production
     container_name: paperscript-frontend
     restart: unless-stopped
+    depends_on:
+      cleanup:
+        condition: service_completed_successfully
     environment:
       - NEXT_PUBLIC_INSFORGE_BASE_URL=https://insforge.wyze.pro
       - NEXT_PUBLIC_INSFORGE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzY2NDZ9.MfQHfauiFJev6x3s7WlsCnhmfEmGKbN9v8QhVVYuoX0
